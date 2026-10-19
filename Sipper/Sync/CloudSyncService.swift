@@ -45,7 +45,7 @@ protocol CloudSyncDelegate: AnyObject {
 /// conflict versions by merging. Requires the app to be signed with an iCloud
 /// container entitlement (see Sipper/Sipper-iCloud.entitlements).
 final class CloudSyncService: NSObject {
-    static let containerSubpath = "Sipper/v1"
+    static let containerSubpath = BuildIdentity.supportDirectory + "/v1"
 
     weak var delegate: CloudSyncDelegate?
 
@@ -91,16 +91,16 @@ final class CloudSyncService: NSObject {
 
     /// True when the app is entitled for iCloud and the user is signed in.
     static var isEntitledAndSignedIn: Bool {
-        FileManager.default.ubiquityIdentityToken != nil
+        !BuildIdentity.isHeadsetTest && FileManager.default.ubiquityIdentityToken != nil
     }
 
     func start() {
-        guard !running else { return }
+        guard !running, !BuildIdentity.isHeadsetTest else { return }
         running = true
         status = .starting
         queue.async { [weak self] in
             guard let self else { return }
-            guard FileManager.default.ubiquityIdentityToken != nil else {
+            guard !BuildIdentity.isHeadsetTest && FileManager.default.ubiquityIdentityToken != nil else {
                 DispatchQueue.main.async { self.finishUnavailable("Sign in to iCloud in System Settings to sync.") }
                 return
             }

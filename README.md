@@ -4,6 +4,16 @@ A SIP softphone built on [PJSIP](https://www.pjsip.org): a native macOS app in
 SwiftUI, a Windows app ([windows/](windows/README.md)), and a Chrome extension that
 adds SIP accounts to either straight from a FusionPBX web UI.
 
+## Native BH71 Workstation support
+
+This fork adds caller name/number display, answer/end, and mute synchronization
+for the Yealink BH71 Workstation on Apple Silicon, using a native USB helper.
+Build it with `./script/build_and_run.sh --build-only`; this produces a separate
+**Sipper BH71 Test** app with isolated settings. See [BH71 setup and validation](BH71-README.md)
+and the [USB protocol notes](BH71-NATIVE-PROTOCOL.md).
+
+The upstream downloads and Homebrew package below are the original Sipper build.
+
 Download it from [sipper.dev](https://sipper.dev), or on a Mac install it with
 [Homebrew](https://brew.sh):
 

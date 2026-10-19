@@ -12,6 +12,7 @@ xcuserdata/
 /vendor/pjsip/
 /vendor/opus-*/
 /vendor/opus/
+/vendor/yealink-sdk/
 /vendor/*.tar.gz
 
 # Extension packaging

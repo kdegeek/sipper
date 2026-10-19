@@ -4,7 +4,7 @@ import Foundation
 /// extension origin as its first argument and talks JSON over stdin/stdout with a
 /// 4-byte native-endian length prefix. See docs/PROTOCOL.md.
 enum NativeMessagingHost {
-    static let hostName = "com.hybes.sipper"
+    static let hostName = BuildIdentity.browserHostName
 
     static func shouldRun(arguments: [String]) -> Bool {
         arguments.dropFirst().contains { $0.hasPrefix("chrome-extension://") || $0 == "--native-messaging-host" }

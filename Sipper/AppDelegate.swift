@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // The unit-test bundle uses the app as its host; keep the SIP stack off there.
         if NSClassFromString("XCTestCase") != nil { return }
+        state.headset.restorePreference()
         state.startEngineIfNeeded()
         if state.settings.showNotifications {
             state.notifications.requestAuthorization { [weak self] granted in

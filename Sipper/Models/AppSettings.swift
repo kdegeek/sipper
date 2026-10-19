@@ -98,7 +98,7 @@ struct AppSettings: Codable, Hashable {
         echoMode = .appleVoiceProcessing
         echoTailMilliseconds = 200
         codecs = []
-        showNotifications = true
+        showNotifications = !BuildIdentity.isHeadsetTest
         showIncomingCallAlert = true
         doNotDisturb = false
         launchAtLogin = false

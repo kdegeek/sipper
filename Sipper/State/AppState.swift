@@ -32,8 +32,12 @@ final class AppState: ObservableObject {
     // MARK: Runtime state
     @Published private(set) var registrations: [UUID: RegistrationState] = [:]
     @Published private(set) var voicemail: [UUID: VoicemailInfo] = [:]
-    @Published private(set) var calls: [CallSnapshot] = []
-    @Published var selectedCallID: Int?
+    @Published private(set) var calls: [CallSnapshot] = [] {
+        didSet { synchronizeHeadset() }
+    }
+    @Published var selectedCallID: Int? {
+        didSet { synchronizeHeadset() }
+    }
     @Published var selection: SidebarItem? = .dialer
     @Published var dialString = ""
     @Published var dialerAccountID: UUID?
@@ -48,6 +52,7 @@ final class AppState: ObservableObject {
     @Published private(set) var lastEndedCall: CallSnapshot?
     @Published private(set) var cloudSyncStatus: CloudSyncStatus = .off
 
+    let headset = BH71Controller()
     let engine: SIPEngine
     let store: PersistenceStore
     let passwords: PasswordStore
@@ -79,22 +84,52 @@ final class AppState: ObservableObject {
     private var incomingPanel: IncomingCallPanelController?
 
     init(store: PersistenceStore = PersistenceStore(),
-         passwords: PasswordStore = KeychainPasswordStore(),
+         passwords: PasswordStore = BuildIdentity.makePasswordStore(),
          engine: SIPEngine = SIPEngine(),
          startEngine: Bool = true) {
         self.store = store
         self.passwords = passwords
         self.engine = engine
+        headset.onAction = { [weak self] action in self?.handleHeadset(action) }
         engine.delegate = self
         notifications.delegate = self
         cloudSync.delegate = self
         load()
-        passwords.synchronizable = settings.iCloudSync
+        passwords.synchronizable = settings.iCloudSync && !BuildIdentity.isHeadsetTest
         if startEngine {
             startEngineIfNeeded()
         }
         if settings.iCloudSync {
             cloudSync.start()
+        }
+    }
+
+    private func synchronizeHeadset() {
+        let snapshots = calls.filter { $0.state != .disconnected && !declinedCallIDs.contains($0.id) }.map { call in
+            let phase: BH71Call.Phase
+            if call.state == .incoming { phase = .incoming }
+            else if call.isOnHold { phase = .held }
+            else if call.state == .confirmed || call.state == .connecting { phase = .active }
+            else { phase = .dialing }
+            return BH71Call(id: call.id, phase: phase, muted: call.isMuted,
+                            name: call.remoteName, number: call.remoteNumber)
+        }
+        headset.synchronize(snapshots, selectedID: selectedCallID)
+    }
+
+    private func handleHeadset(_ action: BH71Action) {
+        switch action {
+        case .answer(let id): answer(callID: id)
+        case .end(let id):
+            guard calls.contains(where: { $0.id == id && $0.state != .incoming }) else { return }
+            hangup(callID: id)
+        case .reject(let id): decline(callID: id)
+        case .mute(let id, let muted):
+            guard calls.contains(where: { $0.id == id && $0.state == .confirmed }) else { return }
+            engine.setMuted(callID: id, muted: muted)
+        case .hold(let id, let held):
+            guard calls.contains(where: { $0.id == id && $0.state == .confirmed }) else { return }
+            engine.setHold(callID: id, onHold: held)
         }
     }
 
@@ -236,6 +271,7 @@ final class AppState: ObservableObject {
     }
 
     func shutdown() {
+        headset.stop()
         ringer.stop()
         incomingPanel?.close()
         engine.stop()
@@ -318,7 +354,7 @@ final class AppState: ObservableObject {
             notifications.requestAuthorization()
         }
         if old.iCloudSync != settings.iCloudSync {
-            passwords.synchronizable = settings.iCloudSync
+            passwords.synchronizable = settings.iCloudSync && !BuildIdentity.isHeadsetTest
             if settings.iCloudSync {
                 migratePasswordsToCurrentKeychainMode()
                 cloudSync.start()
@@ -740,7 +776,7 @@ final class AppState: ObservableObject {
         if !custom.isEmpty { return URL(fileURLWithPath: (custom as NSString).expandingTildeInPath, isDirectory: true) }
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first
             ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Documents")
-        return documents.appendingPathComponent("Sipper Recordings", isDirectory: true)
+        return documents.appendingPathComponent(BuildIdentity.name + " Recordings", isDirectory: true)
     }
 
     func isRecording(callID: Int) -> Bool {

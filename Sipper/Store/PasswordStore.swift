@@ -36,6 +36,37 @@ enum PasswordStoreError: LocalizedError {
     }
 }
 
+/// Imported accounts can use their existing password without changing the
+/// original app's Keychain items. Edits/deletes always target this build's store.
+final class ReadThroughPasswordStore: PasswordStore {
+    private let primary: PasswordStore
+    private let original: PasswordStore
+
+    init(primary: PasswordStore, original: PasswordStore) {
+        self.primary = primary
+        self.original = original
+    }
+
+    var synchronizable: Bool {
+        get { primary.synchronizable }
+        set { primary.synchronizable = newValue }
+    }
+
+    func lookup(for accountID: UUID) -> PasswordLookup {
+        let result = primary.lookup(for: accountID)
+        if result == .missing { return original.lookup(for: accountID) }
+        return result
+    }
+
+    func setPassword(_ password: String, for accountID: UUID) throws {
+        try primary.setPassword(password, for: accountID)
+    }
+
+    func removePassword(for accountID: UUID) {
+        primary.removePassword(for: accountID)
+    }
+}
+
 /// Stores SIP passwords as generic password items in the login keychain. With
 /// `synchronizable` on, items are written as iCloud Keychain items so they follow
 /// the accounts to the user's other Macs.
@@ -48,7 +79,7 @@ final class KeychainPasswordStore: PasswordStore {
     private let service: String
     var synchronizable = false
 
-    init(service: String = "com.hybes.sipper.sip-account") {
+    init(service: String = BuildIdentity.keychainService) {
         self.service = service
     }
 

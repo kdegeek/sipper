@@ -25,7 +25,7 @@ final class PersistenceStore {
     static var defaultDirectory: URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
             ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support")
-        return base.appendingPathComponent("Sipper", isDirectory: true)
+        return base.appendingPathComponent(BuildIdentity.supportDirectory, isDirectory: true)
     }
 
     func url(for file: String) -> URL {

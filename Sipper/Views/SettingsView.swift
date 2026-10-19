@@ -15,8 +15,10 @@ struct SettingsView: View {
                 .tabItem { Label("Network", systemImage: "network") }
             CodecSettingsView()
                 .tabItem { Label("Codecs", systemImage: "waveform") }
-            BrowserExtensionSettingsView()
-                .tabItem { Label("Browser", systemImage: "puzzlepiece.extension") }
+            if !BuildIdentity.isHeadsetTest {
+                BrowserExtensionSettingsView()
+                    .tabItem { Label("Browser", systemImage: "puzzlepiece.extension") }
+            }
             RecordingSettingsView()
                 .tabItem { Label("Recording", systemImage: "record.circle") }
             #if SIPPER_ICLOUD
